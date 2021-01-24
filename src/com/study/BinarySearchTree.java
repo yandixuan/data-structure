@@ -63,9 +63,114 @@ public class BinarySearchTree<E extends Comparable<E>> {
         }
     }
 
-    public void remove(E element) {
 
+    private boolean remove(E element) {
+        TreeNode<E> current = root;
+        TreeNode<E> parent = null;
+        Boolean isLeft = null;
+        // 找到节点
+        for (; ; ) {
+            int comp = element.compareTo(current.element);
+            if (comp == 0) {
+                break;
+            }
+            if (comp < 0) {
+                if (current.left == null) {
+                    return false;
+                }
+                isLeft = true;
+                parent = current;
+                current = current.left;
+            }
+            if (comp > 0) {
+                if (current.right == null) {
+                    return false;
+                }
+                isLeft = false;
+                parent = current;
+                current = current.right;
+            }
+        }
+        // 删除节点为叶节点
+        if (current.left == null && current.right == null) {
+            if (current == root) {
+                root = null;
+            } else if (isLeft) {
+                parent.left = null;
+            } else {
+                parent.right = null;
+            }
+            return true;
+        }
+        // 删除节点只有左节点
+        else if (current.right == null) {
+            if (current == root) {
+                root = current.left;
+            } else if (isLeft) {
+                parent.left = current.left;
+            } else {
+                parent.right = current.left;
+            }
+            return true;
+        }
+        //第三种情况：删除节点只有右节点
+        else if (current.left == null) {
+            if (current == root) {
+                root = current.right;
+            } else if (isLeft) {
+                parent.left = current.right;
+            } else {
+                parent.right = current.right;
+            }
+            return true;
+        }
+        // 删除节点均存在左节点和右节点
+        else {
+            if (current == root) {
+                root = root.left;
+                return true;
+            }
+            // 找到左子树的最大值
+            TreeNode<E> moveNode = current.left, moveNodeParent = current;
+            if (moveNode.right == null) {
+                if (isLeft) {
+                    parent.left = moveNode;
+                } else {
+                    parent.right = moveNode;
+                }
+            } else {
+                while (moveNode.right != null) {
+                    moveNodeParent = moveNode;
+                    moveNode = moveNode.right;
+                }
+                if (isLeft) {
+                    parent.left = moveNode;
+                    moveNodeParent.right = null;
+
+                } else {  //为右节点，连接
+                    parent.right = moveNode;
+                    moveNodeParent.right = null;
+                }
+            }
+            return true;
+        }
     }
+
+
+    private TreeNode<E> findMin(TreeNode<E> node) {
+        while (node.left != null) {
+            node = node.left;
+        }
+        return node;
+    }
+
+    private TreeNode<E> findMax(TreeNode<E> node) {
+        while (node.right != null) {
+            node = node.right;
+        }
+        return node;
+    }
+
 
     public int height() {
         return height(root);
@@ -111,13 +216,16 @@ public class BinarySearchTree<E extends Comparable<E>> {
         };
     }
 
+    /**
+     * 中序遍历迭代器
+     */
     public Iterator<E> inOrderTraversal() {
 
         final int expectedNodeCount = size;
         final Deque<TreeNode<E>> stack = new LinkedList<>();
         stack.push(root);
 
-        return new Iterator<>() {
+        return new Iterator() {
             TreeNode<E> curLeft = root;
 
             @Override
@@ -147,6 +255,9 @@ public class BinarySearchTree<E extends Comparable<E>> {
         };
     }
 
+    /**
+     * 后序遍历迭代器
+     */
     public Iterator<E> postOrderTraversal() {
         final int expectedNodeCount = size;
 
@@ -165,7 +276,7 @@ public class BinarySearchTree<E extends Comparable<E>> {
                 }
             }
         }
-        return new Iterator<>() {
+        return new Iterator() {
             @Override
             public boolean hasNext() {
                 if (expectedNodeCount != size) {
@@ -193,8 +304,8 @@ public class BinarySearchTree<E extends Comparable<E>> {
         tree.insert(122);
         tree.insert(19);
         tree.insert(20);
+        tree.remove(123);
         Iterator<Integer> order = tree.postOrderTraversal();
-
         while (order.hasNext()) {
             Integer element = order.next();
             System.out.println(element);
