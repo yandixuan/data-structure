@@ -15,8 +15,7 @@ package com.study;
  * @author ydx
  */
 public class RedBlackTree<T extends Comparable<T>> {
-
-
+    
     static class Node<T> {
         private T value;
         private Node<T> left;
@@ -32,31 +31,6 @@ public class RedBlackTree<T extends Comparable<T>> {
 
         }
 
-        boolean isRed() {
-            return red;
-        }
-
-        boolean isBlack() {
-            return !red;
-        }
-
-
-        public void setLeft(Node<T> left) {
-            this.left = left;
-        }
-
-        public void setRight(Node<T> right) {
-            this.right = right;
-        }
-
-        public void setParent(Node<T> parent) {
-            this.parent = parent;
-        }
-
-        public void setRed(boolean red) {
-            this.red = red;
-        }
-
         public T getValue() {
             return value;
         }
@@ -69,12 +43,32 @@ public class RedBlackTree<T extends Comparable<T>> {
             return left;
         }
 
+        public void setLeft(Node<T> left) {
+            this.left = left;
+        }
+
         public Node<T> getRight() {
             return right;
         }
 
+        public void setRight(Node<T> right) {
+            this.right = right;
+        }
+
         public Node<T> getParent() {
             return parent;
+        }
+
+        public void setParent(Node<T> parent) {
+            this.parent = parent;
+        }
+
+        public boolean isRed() {
+            return red;
+        }
+
+        public void setRed(boolean red) {
+            this.red = red;
         }
     }
 
@@ -85,24 +79,80 @@ public class RedBlackTree<T extends Comparable<T>> {
     }
 
     /**
-     * 左旋转
+     * 左旋转 (eg:对node节点进行左旋转即node逆时针)
      * <p>
-     * //      node                                       x
-     * //     /    \              左旋转                /    \
-     * //    T1     x           --------->            node    T3
-     * //         /   \                              /    \
-     * //       T2     T3                           T1    T2
+     * //         node                                       x
+     * //        /    \              左旋转                /    \
+     * //       T1     x           --------->            node    T3
+     * //            /   \                              /    \
+     * //          T2     T3                           T1    T2
      *
      * @param node
      */
-    private Node<T> leftRotate(Node<T> node) {
-        Node<T> x = node.right;
-        node.right = x.left;
-        x.left = node;
-        x.red = node.red;
-        return x;
+    private Node<T> rotateLeft(Node<T> node) {
+        Node<T> right = node.right;
+        Node<T> parent = node.parent;
+
+        if (right.getLeft() != null) {
+            node.setRight(right.getLeft());
+            right.left.parent = node;
+        } else {
+            node.right = null;
+        }
+
+        right.setLeft(node);
+        node.setParent(right);
+
+        if (parent == null) {
+            right.parent = null;
+            root = right;
+        } else {
+            if (parent.getLeft() == node) {
+                parent.setLeft(right);
+            } else {
+                parent.setRight(right);
+            }
+            right.parent = parent;
+        }
+        return root;
     }
 
+    /**
+     * 右旋转
+     * //            node                                       x
+     * //           /    \              右旋转                /    \
+     * //          x     T2           --------->             y     node
+     * //        /  \                                             /    \
+     * //       y   T1                                           T1    T2
+     *
+     * @param node
+     */
+    private Node<T> rotateRight(Node<T> node) {
+        Node<T> left = node.left;
+        Node<T> parent = node.parent;
+
+        if (left.getRight() != null) {
+            node.setLeft(left.getRight());
+            left.right.parent = node;
+        } else {
+            node.left = null;
+        }
+
+        left.setRight(node);
+        node.parent = left;
+        if (parent == null) {
+            left.parent = null;
+            root = left;
+        } else {
+            if (parent.getLeft() == node) {
+                parent.setLeft(left);
+            } else {
+                parent.setRight(left);
+            }
+            left.parent = parent;
+        }
+        return left;
+    }
 
     public T addNode(T value) {
         Node<T> t = new Node<T>(value);
@@ -121,71 +171,115 @@ public class RedBlackTree<T extends Comparable<T>> {
         node.setRed(true);
         if (root == null) {
             node.setParent(null);
-            this.root = node;
+            root = node;
             root.setRed(false);
         } else {
             Node<T> parent = findParentNode(node);
             int cmp = parent.getValue().compareTo(node.getValue());
             node.setParent(parent);
-            if (cmp > 0) {
+            if (cmp == 0) {
+                return node.getValue();
+            } else if (cmp > 0) {
                 parent.setLeft(node);
             } else {
                 parent.setRight(node);
             }
             fixInsert(node);
         }
+
         return null;
     }
 
+    /**
+     * 插入修复：
+     * 1.如果插入的是根节点那么直接设置黑色 over
+     * 2.如果父节点是黑色那么符合红黑树定义 over
+     * 3.如果父节点是红色那么不符合红黑树定义需要做插入修复
+     * <p>
+     * 这里我们分别命名
+     * 插入节点为x
+     * x的父亲节点为p
+     * p的父亲节点为g
+     * g的不为p的子节点为y即x的叔叔节点
+     * <p>
+     * 如果 x,p为红色，根据红黑树定义g必为黑色，
+     * case1: 如果y是红色 那么我们就将 p.y染成黑色，g染成红色 这样指针就回溯至g
+     * case2: 如果y是黑色 x为p的右子树 左旋p x指向p 变成case 3
+     * case3: 如果y是黑色 x为p的左子树 p染黑 g染红 右旋g 结束
+     *
+     * @param x
+     */
     private void fixInsert(Node<T> x) {
-        Node<T> parent = x.getParent();
-
-        while (parent != null && parent.isRed()) {
-            Node<T> uncle = getUncle(x);
-            if (uncle == null) {
-                //need to rotate
-                Node<T> ancestor = parent.getParent();
-                //ancestor is not null due to before before add,tree color is balance
-                if (parent == ancestor.getLeft()) {
-                    boolean isRight = x == parent.getRight();
+        Node<T> p = x.getParent();
+        // 如果p不为空且是红色循环继续
+        while (p != null && p.isRed()) {
+            Node<T> y = getUncle(x);
+            // 如果y为null则视为黑色
+            if (y == null) {
+                Node<T> ancestor = p.getParent();
+                // 如果p是左子树
+                if (p == ancestor.getLeft()) {
+                    boolean isRight = x == p.getRight();
+                    // x是p的右子树 这里就是case2了
                     if (isRight) {
-                        rotateLeft(parent);
+                        rotateLeft(p);
                     }
+                    // 左旋完p后 右旋g 那么 root为p了
                     rotateRight(ancestor);
                     if (isRight) {
+                        // 将x染黑
                         x.setRed(false);
-                        parent = null;
+                        p = null;
                         //end loop
                     } else {
-                        parent.setRed(false);
+                        // p染黑
+                        p.setRed(false);
                     }
+                    // 祖先染红（祖先节点已经成了x的子节点了）
                     ancestor.setRed(true);
-                } else {
-                    boolean isLeft = x == parent.getLeft();
+                    // 这一步为止p已经是现在子树的跟借点了 而且是黑色 满足红黑树特性故循环也结束了
+                }
+                // p是右子树
+                else {
+                    boolean isLeft = x == p.getLeft();
+                    // 右旋p节点
                     if (isLeft) {
-                        rotateRight(parent);
+                        rotateRight(p);
                     }
+                    // 左旋g节点
                     rotateLeft(ancestor);
                     if (isLeft) {
+                        // 因为之前右旋了p节点  x为p的父节点 将x染黑
                         x.setRed(false);
-                        parent = null;//end loop
+                        // 结束循环
+                        p = null;
                     } else {
-                        parent.setRed(false);
+                        // 将p染黑
+                        p.setRed(false);
                     }
+                    // 祖先染红（祖先节点已经成了x的子节点了）
                     ancestor.setRed(true);
+                    // 这一步为止p已经是现在子树的跟借点了 而且是黑色 满足红黑树特性故循环也结束了
                 }
-            } else {//uncle is red
-                parent.setRed(false);
-                uncle.setRed(false);
-                parent.getParent().setRed(true);
-                x = parent.getParent();
-                parent = x.getParent();
+            } else {
+                // 如果p y都是红色 p,y均染黑g染红 指针回溯至g点继续循环修正
+                p.setRed(false);
+                y.setRed(false);
+                p.getParent().setRed(true);
+
+                x = p.getParent();
+                p = x.getParent();
             }
         }
-        getRoot().makeBlack();
-        getRoot().setParent(null);
+        root.setRed(false);
     }
 
+    /**
+     * 获取叔叔节点
+     *
+     * @param node
+     * @return
+     */
     private Node<T> getUncle(Node<T> node) {
         Node<T> parent = node.getParent();
         Node<T> ancestor = parent.getParent();
@@ -200,13 +294,14 @@ public class RedBlackTree<T extends Comparable<T>> {
     }
 
     private Node<T> findParentNode(Node<T> x) {
-        Node<T> dataRoot = this.root;
+        Node<T> dataRoot = root;
         Node<T> child = dataRoot;
         while (child != null) {
             int cmp = child.getValue().compareTo(x.getValue());
             if (cmp == 0) {
                 return child;
             }
+            dataRoot = child;
             // child > x
             if (cmp > 0) {
                 child = child.getLeft();
@@ -215,10 +310,25 @@ public class RedBlackTree<T extends Comparable<T>> {
             else {
                 child = child.getRight();
             }
-            dataRoot = child;
         }
         return dataRoot;
     }
 
+    public static void main(String[] args) {
+        RedBlackTree<String> tree = new RedBlackTree<>();
+        tree.addNode("d");
+        tree.addNode("d");
+        tree.addNode("c");
+        tree.addNode("c");
+        tree.addNode("b");
+        tree.addNode("f");
+
+        tree.addNode("a");
+        tree.addNode("e");
+
+        tree.addNode("g");
+        tree.addNode("h");
+        System.out.println(tree);
+    }
 
 }
