@@ -15,13 +15,18 @@ package com.study;
  * @author ydx
  */
 public class RedBlackTree<T extends Comparable<T>> {
-    
+
     static class Node<T> {
         private T value;
         private Node<T> left;
         private Node<T> right;
         private Node<T> parent;
         private boolean red;
+
+        @Override
+        public String toString() {
+            return value.toString();
+        }
 
         Node(T value) {
             this.value = value;
@@ -77,6 +82,106 @@ public class RedBlackTree<T extends Comparable<T>> {
     public RedBlackTree() {
 
     }
+
+    /**
+     * 删除节点
+     * <p>
+     * 1.删除红色节点，不会影响黑高，也不会违反性质4
+     * 2.但是删除黑色的节点需要调整
+     *
+     * @param value
+     * @return
+     */
+    public T remove(T value) {
+        Node<T> dataRoot = root;
+        Node<T> parent = root;
+
+        while (dataRoot != null) {
+            int cmp = dataRoot.getValue().compareTo(value);
+            if (cmp < 0) {
+                parent = dataRoot;
+                dataRoot = dataRoot.getRight();
+            } else if (cmp > 0) {
+                parent = dataRoot;
+                dataRoot = dataRoot.getLeft();
+            } else {
+                // 当匹配了节点
+                if (dataRoot.getRight() != null) {
+                    // 调取节点的右子树最小的节点
+                    Node<T> min = removeMin(dataRoot.getRight());
+                    //
+                    
+
+                }
+                // 需要删除的节点的右子树为null
+                else {
+
+
+                }
+
+                return dataRoot.getValue();
+            }
+
+        }
+        return null;
+    }
+
+
+    /**
+     * 当前需要调整的节点 x
+     * x的兄弟s
+     * x,s的父亲p
+     * s的left sn
+     * s的right sn
+     * <p>
+     * <p>
+     * case1:
+     *
+     * @param node
+     */
+    private void fixRemove(Node<T> node) {
+
+
+    }
+
+
+    private Node<T> getSibling(Node<T> node, Node<T> parent) {
+        parent = node == null ? parent : node.getParent();
+        if (node == null) {
+            return parent.getLeft() == null ? parent.getRight() : parent.getLeft();
+        }
+        if (node == parent.getLeft()) {
+            return parent.getRight();
+        } else {
+            return parent.getLeft();
+        }
+    }
+
+    /**
+     * 找节点对应子树的最小值
+     *
+     * @param node
+     * @return
+     */
+    private Node<T> removeMin(Node<T> node) {
+        //find the min node
+        Node<T> parent = node;
+        while (node != null && node.getLeft() != null) {
+            parent = node;
+            node = node.getLeft();
+        }
+        //remove min node
+        if (parent == node) {
+            return node;
+        }
+
+        parent.setLeft(node.getRight());
+        if (node.getRight() != null) {
+            node.getRight().parent = parent;
+        }
+        return node;
+    }
+
 
     /**
      * 左旋转 (eg:对node节点进行左旋转即node逆时针)
@@ -314,6 +419,39 @@ public class RedBlackTree<T extends Comparable<T>> {
         return dataRoot;
     }
 
+    public void printTree(Node<T> root) {
+        java.util.LinkedList<Node<T>> queue = new java.util.LinkedList<>();
+        java.util.LinkedList<Node<T>> queue2 = new java.util.LinkedList<>();
+        if (root == null) {
+            return;
+        }
+        queue.add(root);
+        boolean firstQueue = true;
+
+        while (!queue.isEmpty() || !queue2.isEmpty()) {
+            java.util.LinkedList<Node<T>> q = firstQueue ? queue : queue2;
+            Node<T> n = q.poll();
+
+            if (n != null) {
+                String pos = n.getParent() == null ? "" : (n == n.getParent().getLeft()
+                        ? " LE" : " RI");
+                String pstr = n.getParent() == null ? "" : n.getParent().toString();
+                String cstr = n.isRed() ? "R" : "B";
+                cstr = n.getParent() == null ? cstr : cstr + " ";
+                System.out.print(n + "(" + (cstr) + pstr + (pos) + ")" + "\t");
+                if (n.getLeft() != null) {
+                    (firstQueue ? queue2 : queue).add(n.getLeft());
+                }
+                if (n.getRight() != null) {
+                    (firstQueue ? queue2 : queue).add(n.getRight());
+                }
+            } else {
+                System.out.println();
+                firstQueue = !firstQueue;
+            }
+        }
+    }
+
     public static void main(String[] args) {
         RedBlackTree<String> tree = new RedBlackTree<>();
         tree.addNode("d");
@@ -328,7 +466,11 @@ public class RedBlackTree<T extends Comparable<T>> {
 
         tree.addNode("g");
         tree.addNode("h");
-        System.out.println(tree);
+
+        tree.printTree(tree.root);
+        System.out.println("");
+        tree.remove("c");
+        tree.printTree(tree.root);
     }
 
 }
