@@ -177,7 +177,7 @@ public class RedBlackTree<T extends Comparable<T>> {
      * s的right rn
      * <p>
      * <p>
-     * case1:
+     * 情形参考于：<a>http://www.likecs.com/show-33155.html</a>
      *
      * @param node
      */
