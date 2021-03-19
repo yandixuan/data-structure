@@ -86,8 +86,13 @@ public class RedBlackTree<T extends Comparable<T>> {
     /**
      * 删除节点
      * <p>
-     * 1.删除红色节点，不会影响黑高，也不会违反性质4
-     * 2.但是删除黑色的节点需要调整
+     * 删除一个新的节点有以下四种情况：
+     * 1. 删除的节点是叶子节点（非Nil）
+     * 2. 删除的节点只有左子树
+     * 3. 删除的节点只有右子树
+     * 4. 删除的节点同时拥有左子树和右子树
+     * 其实只有上面前三种情况，对于第四种情况，可以找到待删除节点的直接后继节点，用这个节点的值代替待删除节点，
+     * 接着情况转变为删除这个直接后继节点，情况也变为前三种之一。
      *
      * @param value
      * @return
@@ -105,23 +110,60 @@ public class RedBlackTree<T extends Comparable<T>> {
                 parent = dataRoot;
                 dataRoot = dataRoot.getLeft();
             } else {
-                // 当匹配了节点
-                if (dataRoot.getRight() != null) {
-                    // 调取节点的右子树最小的节点
-                    Node<T> min = removeMin(dataRoot.getRight());
-                    //
-                    
-
+                T data = dataRoot.value;
+                if (dataRoot.left == null && dataRoot.right == null) {
+                    if (dataRoot == root) {
+                        root = null;
+                    } else {
+                        if (!dataRoot.isRed()) {
+                            fixRemove(dataRoot);
+                        } else {
+                            if (parent.getLeft() == dataRoot) {
+                                parent.left = null;
+                            }
+                            if (parent.getRight() == dataRoot) {
+                                parent.right = null;
+                            }
+                        }
+                    }
                 }
-                // 需要删除的节点的右子树为null
+                // 删除节点存在左右子树
+                else if (dataRoot.left != null && dataRoot.right != null) {
+                    Node<T> x = removeMin(dataRoot.getRight());
+                    // x只为叶子节点
+                    T tmp = x.value;
+                    x.value = dataRoot.value;
+                    dataRoot.value = tmp;
+
+                    if (!x.isRed()) {
+                        fixRemove(x);
+                    } else {
+                        Node<T> p = x.parent;
+                        if (p.getLeft() == x) {
+                            p.left = null;
+                        }
+                        if (p.getRight() == x) {
+                            p.right = null;
+                        }
+                        x.parent = null;
+                    }
+                }
+                // 删除的节点只有左子树或者右子树 那么节点为了满足红黑树性质 必然满足 删除节点黑色 子节点红色 直接交换值
+                // 必然是 黑->红 Null也是算黑高的
                 else {
-
-
+                    if (dataRoot.getRight() != null) {
+                        Node<T> right = dataRoot.getRight();
+                        dataRoot.value = right.value;
+                        dataRoot.right = null;
+                    }
+                    if (dataRoot.getLeft() != null) {
+                        Node<T> left = dataRoot.getLeft();
+                        dataRoot.value = left.value;
+                        dataRoot.left = null;
+                    }
                 }
-
-                return dataRoot.getValue();
+                return data;
             }
-
         }
         return null;
     }
@@ -131,8 +173,8 @@ public class RedBlackTree<T extends Comparable<T>> {
      * 当前需要调整的节点 x
      * x的兄弟s
      * x,s的父亲p
-     * s的left sn
-     * s的right sn
+     * s的left ln
+     * s的right rn
      * <p>
      * <p>
      * case1:
@@ -140,8 +182,53 @@ public class RedBlackTree<T extends Comparable<T>> {
      * @param node
      */
     private void fixRemove(Node<T> node) {
+        Node<T> x = node;
+        Node<T> p = node.parent;
+        Node<T> s = getSibling(x, p);
+        Node<T> ln = s.left;
+        Node<T> rn = s.right;
+        // 当叶子节点为黑色的时候
+
+        for (; ; ) {
+            //  case1: s为红色 s染黑 p染红左旋p
+            if (s.isRed()) {
+                s.setRed(false);
+                p.setRed(true);
+                rotateLeft(p);
+            } else if (rn != null && rn.isRed()) {
+                boolean isRedTmp = p.isRed();
+                p.red = s.red;
+                s.red = isRedTmp;
+                rn.red = false;
+                rotateLeft(p);
+                if (p.getLeft() == x) {
+                    p.left = null;
+                    x.parent = null;
+                }
+                break;
+            } else if (ln != null && ln.isRed()) {
+                ln.red = false;
+                s.red = true;
+                rotateRight(s);
+            } else if (p.isRed()) {
+                p.red = false;
+                s.red = true;
+                if (p.getLeft() == x) {
+                    p.left = null;
+                    x.parent = null;
+                }
+                break;
+            } else {
+                s.red = true;
+                getSibling(p, p.parent).red = true;
+                break;
+            }
 
 
+        }
+        if (root != null) {
+            root.red = false;
+        }
     }
 
 
@@ -164,20 +251,8 @@ public class RedBlackTree<T extends Comparable<T>> {
      * @return
      */
     private Node<T> removeMin(Node<T> node) {
-        //find the min node
-        Node<T> parent = node;
         while (node != null && node.getLeft() != null) {
-            parent = node;
             node = node.getLeft();
-        }
-        //remove min node
-        if (parent == node) {
-            return node;
-        }
-
-        parent.setLeft(node.getRight());
-        if (node.getRight() != null) {
-            node.getRight().parent = parent;
         }
         return node;
     }
@@ -455,8 +530,6 @@ public class RedBlackTree<T extends Comparable<T>> {
     public static void main(String[] args) {
         RedBlackTree<String> tree = new RedBlackTree<>();
         tree.addNode("d");
-        tree.addNode("d");
-        tree.addNode("c");
         tree.addNode("c");
         tree.addNode("b");
         tree.addNode("f");
@@ -469,7 +542,7 @@ public class RedBlackTree<T extends Comparable<T>> {
 
         tree.printTree(tree.root);
         System.out.println("");
-        tree.remove("c");
+        tree.remove("b");
         tree.printTree(tree.root);
     }
 
